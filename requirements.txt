@@ -1,3 +1,4 @@
 mcp
 python-dotenv
 requests
+garminconnect

@@ -1,37 +1,53 @@
 # strava-mcp-agent
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that connects Claude Desktop to your Strava account — enabling AI-powered training analysis and planning through natural language.
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that connects Claude Desktop to your Strava and Garmin Connect accounts — enabling AI-powered training analysis and planning through natural language.
 
 ## How it works
 
 ```
 You (Claude Desktop)  →  MCP Server (server.py)  →  Strava API
-        ↑                                                 |
+        ↑                                        ↘  Garmin Connect
         └─────────── analysis & training plan ───────────┘
 ```
 
-Claude autonomously decides which tools to call based on your request. You just talk naturally:
+Both data sources are **optional and independent** — use one or both. Claude autonomously decides which tools to call based on your request:
 
 > *"Analyze my last 2 weeks of training and check for signs of overtraining"*
 > *"Build me a training plan for next week based on my current fitness"*
-> *"How has my cardio improved over the last month?"*
+> *"How was my sleep and recovery this week?"*
+> *"Cross-reference my Strava activities with my Garmin sleep data"*
 
 ## Available Tools
 
+### Strava
+
 | Tool | Description |
 |------|-------------|
-| `get_athlete_profile` | Name, location, weight, FTP |
-| `get_athlete_stats` | Lifetime totals: distance, time, elevation |
-| `get_recent_activities` | Activities list for last N days with pace, HR, elevation |
-| `get_activity_detail` | Full details: laps, splits, HR zones for a single activity |
-| `get_training_load` | ATL (7-day), CTL (42-day), TSB — detects fatigue vs freshness |
-| `get_athlete_zones` | Configured heart rate and power zones |
+| `strava_get_athlete_profile` | Name, location, weight, FTP |
+| `strava_get_athlete_stats` | Lifetime totals: distance, time, elevation |
+| `strava_get_recent_activities` | Activities list for last N days with pace, HR, elevation |
+| `strava_get_activity_detail` | Full details: laps, splits, HR zones for a single activity |
+| `strava_get_training_load` | ATL (7-day), CTL (42-day), TSB — detects fatigue vs freshness |
+| `strava_get_athlete_zones` | Configured heart rate and power zones |
+
+### Garmin Connect
+
+| Tool | Description |
+|------|-------------|
+| `garmin_get_profile` | Garmin user profile |
+| `garmin_get_recent_activities` | Activities with pace, HR, calories, VO2max, training effect |
+| `garmin_get_training_load` | ATL (7-day), CTL (42-day), TSB from Garmin data |
+| `garmin_get_sleep` | Sleep duration, deep/light/REM breakdown, sleep score |
+| `garmin_get_resting_hr` | Daily resting heart rate — key recovery indicator |
+| `garmin_get_daily_steps` | Daily step counts |
+| `garmin_get_training_status` | Garmin Training Status and Readiness Score |
 
 ## Prerequisites
 
 - **Claude Desktop** — [download here](https://claude.ai/download) (free)
 - **Python 3.11+**
-- **Strava account**
+- **Strava account** (optional)
+- **Garmin Connect account** (optional)
 
 ## Setup
 
@@ -57,16 +73,20 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-### 3. Create a Strava API application
+### 3. Configure credentials
+
+```bash
+cp .env.example .env
+```
+
+#### Strava (optional)
 
 1. Go to [strava.com/settings/api](https://www.strava.com/settings/api)
 2. Create an app — set **Authorization Callback Domain** to `localhost`
 3. Note your **Client ID** and **Client Secret**
-
-### 4. Authorize and get tokens
+4. Run the OAuth helper:
 
 ```bash
-cp .env.example .env
 python3 auth_setup.py
 ```
 
@@ -74,6 +94,17 @@ This will:
 - Open a browser for Strava OAuth
 - Request `activity:read_all` scope
 - Save `STRAVA_REFRESH_TOKEN` to `.env` automatically
+
+#### Garmin Connect (optional)
+
+Add your Garmin credentials directly to `.env`:
+
+```env
+GARMIN_EMAIL=your@email.com
+GARMIN_PASSWORD=yourpassword
+```
+
+> Garmin Connect uses email/password authentication (no OAuth). Your credentials stay local in `.env` — never committed to git.
 
 ### 5. Configure Claude Desktop
 
@@ -106,7 +137,8 @@ After restart, click `+` in the chat input → **Connectors** → toggle **strav
 strava-mcp-agent/
 ├── server.py          # MCP server — defines and handles all tools
 ├── strava_client.py   # Strava REST API client + ATL/CTL/TSB calculation
-├── auth_setup.py      # One-time OAuth flow — saves tokens to .env
+├── garmin_client.py   # Garmin Connect client (sleep, HR, steps, activities)
+├── auth_setup.py      # One-time OAuth flow for Strava — saves tokens to .env
 ├── requirements.txt
 ├── .env.example
 └── .gitignore
