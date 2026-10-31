@@ -9,9 +9,9 @@ There are two ways to use it — pick one or both (they share the same `.env`):
 | | Web dashboard | Claude Desktop (MCP) |
 |---|---|---|
 | Setup | `docker compose up` or `python -m web`, everything else in the browser | venv + `auth_setup.py` + Claude config |
-| Charts (fitness / fatigue / form, weekly volume, sleep, HR) | ✅ | — |
-| AI analysis & training plans | ✅ Claude, OpenAI or local Ollama (your API key) | ✅ via your Claude subscription |
-| Free-form chat with tool calls | — | ✅ |
+| Charts (fitness / fatigue / form, weekly volume, sleep, HR) | + | — |
+| AI analysis & training plans | + Claude, OpenAI or local Ollama (your API key) | + via your Claude subscription |
+| Free-form chat with tool calls | — | + |
 
 ## Web dashboard — quick start
 
