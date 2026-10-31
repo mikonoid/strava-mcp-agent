@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Training dashboard{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">🏃 Training dashboard</a>
+    <nav>
+      {% if sources %}<a href="/">Dashboard</a>{% endif %}
+      <a href="/settings">Settings</a>
+      {% if sources %}
+      <form method="post" action="/refresh" class="inline">
+        <button class="btn ghost" title="Clear cache and reload data from Strava/Garmin">⟳ Refresh</button>
+      </form>
+      {% endif %}
+    </nav>
+  </header>
+  <main class="container">
+    {% if flash %}<div class="flash {{ flash[0] }}">{{ flash[1] }}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+  <script src="{{ url_for('static', path='app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

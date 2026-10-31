@@ -1,0 +1,14 @@
+services:
+  dashboard:
+    build: .
+    ports:
+      # Bound to localhost only — the dashboard stores your API keys
+      - "127.0.0.1:8000:8000"
+    volumes:
+      # Settings saved in the web UI are written here (create it first: touch .env)
+      - ./.env:/app/.env
+      - garmin-tokens:/data/garmin-tokens
+    restart: unless-stopped
+
+volumes:
+  garmin-tokens:

@@ -56,17 +56,27 @@ class StravaClient:
         resp.raise_for_status()
         return resp.json()
 
-    def get_activities(self, days: int = 14, per_page: int = 50) -> list[dict]:
+    def get_activities(self, days: int = 14, per_page: int = 50, page: int = 1) -> list[dict]:
         """Get recent activities within last N days."""
         after = int((datetime.now(timezone.utc) - timedelta(days=days)).timestamp())
         resp = requests.get(
             f"{STRAVA_API}/athlete/activities",
             headers=self._headers(),
-            params={"after": after, "per_page": per_page},
+            params={"after": after, "per_page": per_page, "page": page},
             timeout=10
         )
         resp.raise_for_status()
         return resp.json()
+
+    def get_all_activities(self, days: int, max_pages: int = 10) -> list[dict]:
+        """Get every activity within last N days, following pagination."""
+        result: list[dict] = []
+        for page in range(1, max_pages + 1):
+            batch = self.get_activities(days=days, per_page=200, page=page)
+            result.extend(batch)
+            if len(batch) < 200:
+                break
+        return result
 
     def get_activity(self, activity_id: int) -> dict:
         """Get detailed info for a single activity."""
@@ -148,3 +158,30 @@ class StravaClient:
                 "Accumulated fatigue — consider recovery"
             )
         }
+
+
+def format_activity_summary(act: dict) -> dict:
+    """Strip down a raw Strava activity to useful fields."""
+    distance_km = round((act.get("distance") or 0) / 1000, 2)
+    moving_time_min = round((act.get("moving_time") or 0) / 60, 1)
+    avg_pace = None
+    if distance_km > 0 and moving_time_min > 0:
+        pace_sec = (act["moving_time"] / (act["distance"] / 1000))
+        avg_pace = f"{int(pace_sec // 60)}:{int(pace_sec % 60):02d} /km"
+
+    return {
+        "id": act["id"],
+        "name": act.get("name"),
+        "type": act.get("sport_type", act.get("type")),
+        "date": act.get("start_date_local", "")[:10],
+        "distance_km": distance_km,
+        "moving_time_min": moving_time_min,
+        "avg_pace_per_km": avg_pace,
+        "avg_heart_rate": act.get("average_heartrate"),
+        "max_heart_rate": act.get("max_heartrate"),
+        "avg_speed_kmh": round((act.get("average_speed") or 0) * 3.6, 2),
+        "elevation_gain_m": act.get("total_elevation_gain"),
+        "suffer_score": act.get("suffer_score"),
+        "kudos": act.get("kudos_count"),
+        "pr_count": act.get("pr_count"),
+    }

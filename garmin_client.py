@@ -1,6 +1,7 @@
 """Garmin Connect client using the unofficial garminconnect library."""
 import os
 from datetime import date, timedelta
+from pathlib import Path
 
 from garminconnect import Garmin
 
@@ -13,8 +14,12 @@ class GarminClient:
 
     def _get_client(self) -> Garmin:
         if self._client is None:
+            # Persist session tokens so we don't re-login (and hit Garmin's 429 rate limit) every run
+            base = Path(os.environ.get("GARMINTOKENS", "~/.garminconnect")).expanduser()
+            tokenstore = base / self.email.lower()
+            tokenstore.mkdir(parents=True, exist_ok=True, mode=0o700)
             self._client = Garmin(self.email, self.password)
-            self._client.login()
+            self._client.login(tokenstore=str(tokenstore))
         return self._client
 
     def get_profile(self) -> dict:

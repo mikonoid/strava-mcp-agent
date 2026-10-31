@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ activity.name if activity else "Activity" }} · Training dashboard{% endblock %}
+{% block content %}
+<p><a href="/" class="muted">← Back to dashboard</a></p>
+{% if error %}
+<div class="flash error">{{ error }}</div>
+{% else %}
+<section class="page-head">
+  <div>
+    <h1>{{ activity.name }}</h1>
+    <div class="muted">{{ activity.date }} · {{ activity.type }}{% if activity.gear %} · {{ activity.gear }}{% endif %}
+      · <a href="{{ activity.url }}" target="_blank" rel="noopener">Open in Strava ↗</a></div>
+  </div>
+</section>
+
+<section class="cards">
+  <div class="card"><div class="label">Distance</div><div class="value">{{ "%.2f" | format(activity.distance_km) }} <small>km</small></div></div>
+  <div class="card"><div class="label">Moving time</div><div class="value">{{ activity.duration_min | duration }}</div></div>
+  <div class="card"><div class="label">Pace</div><div class="value">{{ activity.pace or "—" }}</div></div>
+  <div class="card"><div class="label">Avg / max HR</div><div class="value">{{ activity.avg_hr | round | int if activity.avg_hr else "—" }} / {{ activity.max_hr | round | int if activity.max_hr else "—" }}</div></div>
+  <div class="card"><div class="label">Elevation</div><div class="value">{{ activity.elevation_gain_m | round | int if activity.elevation_gain_m else 0 }} <small>m</small></div></div>
+  {% if activity.calories %}<div class="card"><div class="label">Calories</div><div class="value">{{ activity.calories | round | int }}</div></div>{% endif %}
+</section>
+
+{% if activity.description %}<section class="panel"><p class="pre">{{ activity.description }}</p></section>{% endif %}
+
+{% if activity.splits %}
+<section class="panel">
+  <h2>Splits (per km)</h2>
+  <div class="chart-box"><canvas id="splitsChart"></canvas></div>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Km</th><th class="num">Distance</th><th class="num">Time</th><th class="num">Pace</th><th class="num">Avg HR</th><th class="num">Elev Δ</th></tr></thead>
+    <tbody>
+    {% for s in activity.splits %}
+      <tr>
+        <td>{{ s.km }}</td>
+        <td class="num">{{ "%.0f m" | format(s.distance_m or 0) }}</td>
+        <td class="num">{{ s.moving_time_s | pace }}</td>
+        <td class="num">{{ s.pace_s_per_km | pace }}</td>
+        <td class="num">{{ s.avg_hr | round | int if s.avg_hr else "—" }}</td>
+        <td class="num">{{ "%+.0f m" | format(s.elev_m) if s.elev_m is not none else "—" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
+
+{% if activity.laps | length > 1 %}
+<section class="panel">
+  <h2>Laps</h2>
+  <div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Lap</th><th class="num">Distance</th><th class="num">Time</th><th class="num">Speed</th><th class="num">Avg HR</th></tr></thead>
+    <tbody>
+    {% for lap in activity.laps %}
+      <tr>
+        <td>{{ lap.name }}</td>
+        <td class="num">{{ "%.2f km" | format(lap.distance_km) }}</td>
+        <td class="num">{{ lap.moving_time_min | duration }}</td>
+        <td class="num">{{ lap.avg_speed_kmh }} km/h</td>
+        <td class="num">{{ lap.avg_hr | round | int if lap.avg_hr else "—" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{% if activity and activity.splits %}
+<script>renderSplits({{ activity.splits | tojson }});</script>
+{% endif %}
+{% endblock %}

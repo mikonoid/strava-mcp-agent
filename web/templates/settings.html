@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Settings · Training dashboard{% endblock %}
+{% macro field(key, label, type="text", placeholder="") -%}
+  <label>
+    <span>{{ label }}</span>
+    {% if key in saved_secrets %}
+    <input type="password" name="{{ key }}" placeholder="•••••••• saved — leave empty to keep" autocomplete="off">
+    {% else %}
+    <input type="{{ type }}" name="{{ key }}" value="{{ values[key] }}" placeholder="{{ placeholder }}" autocomplete="off">
+    {% endif %}
+  </label>
+{%- endmacro %}
+{% block content %}
+<h1>Settings</h1>
+<p class="muted small">Stored locally in <code>{{ env_file }}</code> — shared with the Claude Desktop MCP server.</p>
+
+<form method="post" action="/settings" class="settings">
+  <section class="panel" id="strava">
+    <div class="panel-head">
+      <h2>Strava</h2>
+      {% if strava_connected %}<span class="status ok">● Connected</span>{% else %}<span class="status">○ Not connected</span>{% endif %}
+    </div>
+    <ol class="steps muted small">
+      <li>Open <a href="https://www.strava.com/settings/api" target="_blank" rel="noopener">strava.com/settings/api</a> and create an app.</li>
+      <li>Set <b>Authorization Callback Domain</b> to <code>localhost</code>.</li>
+      <li>Paste Client ID and Secret below, press <b>Save</b>, then <b>Connect with Strava</b>.</li>
+    </ol>
+    <div class="form-grid">
+      {{ field("STRAVA_CLIENT_ID", "Client ID") }}
+      {{ field("STRAVA_CLIENT_SECRET", "Client Secret", "password") }}
+    </div>
+    <div class="actions">
+      <a class="btn strava" href="/auth/strava">{{ "Reconnect" if strava_connected else "Connect" }} with Strava</a>
+      {% if strava_connected %}
+      <button class="btn ghost" formaction="/auth/strava/disconnect" formmethod="post">Disconnect</button>
+      {% endif %}
+    </div>
+    <p class="muted small">Callback URL: <code>{{ callback_url }}</code> (open the dashboard via <code>localhost</code>, not <code>127.0.0.1</code>).</p>
+  </section>
+
+  <section class="panel" id="garmin">
+    <h2>Garmin Connect <span class="muted small">(optional)</span></h2>
+    <p class="muted small">Sleep, resting heart rate, steps and Garmin activities. Uses your Garmin login (no official API).</p>
+    <div class="form-grid">
+      {{ field("GARMIN_EMAIL", "Email", "email") }}
+      {{ field("GARMIN_PASSWORD", "Password", "password") }}
+    </div>
+  </section>
+
+  <section class="panel" id="ai">
+    <h2>AI coach <span class="muted small">(optional)</span></h2>
+    <p class="muted small">Choose a provider. For a local model, pick <b>OpenAI-compatible</b> and set the base URL, e.g. Ollama: <code>http://localhost:11434/v1</code>.</p>
+    <div class="form-grid">
+      <label>
+        <span>Provider</span>
+        <select name="LLM_PROVIDER" id="llmProvider">
+          <option value="anthropic" {% if llm_provider == "anthropic" %}selected{% endif %}>Anthropic (Claude)</option>
+          <option value="openai" {% if llm_provider == "openai" %}selected{% endif %}>OpenAI / OpenAI-compatible</option>
+        </select>
+      </label>
+      <label>
+        <span>Model <span class="muted">(empty = default)</span></span>
+        <input type="text" name="LLM_MODEL" id="llmModel" value="{{ values.LLM_MODEL }}"
+               data-defaults='{{ default_models | tojson }}' placeholder="{{ default_models[llm_provider] }}">
+      </label>
+      {{ field("ANTHROPIC_API_KEY", "Anthropic API key", "password", "sk-ant-…") }}
+      {{ field("OPENAI_API_KEY", "OpenAI API key", "password", "sk-…") }}
+      {{ field("OPENAI_BASE_URL", "OpenAI-compatible base URL", "url", "https://api.openai.com/v1") }}
+    </div>
+  </section>
+
+  <div class="actions sticky">
+    <button class="btn primary" type="submit">Save</button>
+    {% if sources %}<a class="btn ghost" href="/">Go to dashboard →</a>{% endif %}
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}<script>initSettings();</script>{% endblock %}

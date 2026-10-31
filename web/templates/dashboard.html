@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js"></script>
+{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div class="athlete">
+    {% if profile and profile.avatar %}<img src="{{ profile.avatar }}" alt="" class="avatar">{% endif %}
+    <div>
+      <h1>{{ profile.name if profile and profile.name else "Your training" }}</h1>
+      {% if profile and (profile.city or profile.country) %}
+      <div class="muted">{{ [profile.city, profile.country] | select | join(", ") }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% if sources | length > 1 %}
+  <div class="tabs">
+    {% for s in sources %}
+    <a href="/?source={{ s }}" class="tab {% if s == source %}active{% endif %}">{{ s | capitalize }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<div id="dashboard" data-source="{{ source }}" data-garmin="{{ 'true' if garmin else 'false' }}">
+  <section class="cards" id="cards">
+    <div class="card skeleton">Loading training load…</div>
+  </section>
+
+  <section class="grid-2">
+    <div class="panel">
+      <h2>Training load <span class="hint" title="ATL = 7-day average minutes/day (fatigue). CTL = 42-day average (fitness). TSB = CTL − ATL (form).">ⓘ</span></h2>
+      <div class="chart-box"><canvas id="loadChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Weekly volume</h2>
+      <div class="chart-box"><canvas id="weeklyChart"></canvas></div>
+    </div>
+  </section>
+
+  <section class="panel" id="ai">
+    <h2>🤖 AI coach</h2>
+    {% if llm_ready %}
+    <div class="muted small">Uses {{ llm_provider }} · {{ llm_model }}. Your training summary is sent to the provider.</div>
+    <div class="chips">
+      <button class="chip" data-q="{{ default_question }}">Analyse &amp; plan next week</button>
+      <button class="chip" data-q="Am I at risk of overtraining or injury? Look at load, volume jumps, resting HR and sleep.">Overtraining check</button>
+      <button class="chip" data-q="Build a 7-day training plan for next week based on my current fitness and fatigue.">Plan next week</button>
+      <button class="chip" data-q="How is my recovery (sleep, resting HR, TSB)? Should I train hard or rest today?">Train or rest today?</button>
+      <button class="chip" data-q="Estimate my current race potential for 5K, 10K and half marathon from recent runs.">Race predictions</button>
+    </div>
+    <form id="aiForm">
+      <textarea id="aiQuestion" rows="3" placeholder="Ask anything about your training… (any language)"></textarea>
+      <button class="btn primary" id="aiButton" type="submit">Analyse</button>
+    </form>
+    <div id="aiOutput" class="markdown"></div>
+    {% else %}
+    <p class="muted">Add an Anthropic or OpenAI API key (or a local Ollama URL) in <a href="/settings#ai">Settings</a> to get AI analysis and training plans.</p>
+    {% endif %}
+  </section>
+
+  {% if garmin %}
+  <section class="panel">
+    <h2>Recovery <span class="muted small">(Garmin, last 14 days)</span></h2>
+    <div id="wellnessError"></div>
+    <div class="grid-3">
+      <div><h3>Sleep</h3><div class="chart-box small"><canvas id="sleepChart"></canvas></div></div>
+      <div><h3>Resting HR</h3><div class="chart-box small"><canvas id="hrChart"></canvas></div></div>
+      <div><h3>Steps</h3><div class="chart-box small"><canvas id="stepsChart"></canvas></div></div>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Activities</h2>
+      <select name="days" hx-get="/partials/activities?source={{ source }}" hx-target="#activities" hx-indicator="#actSpinner">
+        <option value="7">Last 7 days</option>
+        <option value="14" selected>Last 14 days</option>
+        <option value="30">Last 30 days</option>
+        <option value="90">Last 90 days</option>
+      </select>
+    </div>
+    <span id="actSpinner" class="htmx-indicator muted">Loading…</span>
+    <div id="activities" hx-get="/partials/activities?source={{ source }}&days=14" hx-trigger="load">
+      <div class="muted">Loading activities…</div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script>initDashboard();</script>{% endblock %}
